@@ -1,0 +1,5 @@
+*.pkl
+*.png
+*.ipynb_checkpoints/
+__pycache__/
+*.pyc

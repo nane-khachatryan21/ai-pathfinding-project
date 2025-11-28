@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Large data
+*.pkl
+*.csv
+
+# OS-specific junk
+.DS_Store
+
