@@ -104,6 +104,9 @@ class BestFirstFrontier(Frontier):
 
     def remove_node(self):
         return heapq.heappop(self._queue)
+    
+    def top(self):
+        return self._queue[0] if self._queue else None
 
 
 class AbstractQueueFrontier(Frontier):
