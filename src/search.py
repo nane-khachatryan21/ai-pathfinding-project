@@ -30,7 +30,7 @@ class Node:
     def __init__(self, parent, action, state):
         self.value = 0
         self.parent = parent
-        self.action = state
+        self.action = action
         self.state = state
         self.depth = parent.depth + 1 if parent else 0
         self.path_cost = parent.path_cost + action.cost() if parent else 0
@@ -62,11 +62,19 @@ class NodeFunction:
 
 
 class AStarFunction(NodeFunction):
-    def __init__(self, heuristic_function):
-        self.heuristic_function = heuristic_function
+    def __init__(self, heuristic):
+        """
+        heuristic: either a callable(state) -> float or a mapping state -> float
+        """
+        self.heuristic = heuristic
 
     def eval(self, node):
-        return node.path_cost + self.heuristic_function.eval(node)
+        if callable(self.heuristic):
+            h_val = self.heuristic(node.state)
+        else:
+            h_val = self.heuristic[node.state]
+        return node.path_cost + h_val
+
 
 class UCSFunction(NodeFunction):
     def eval(self, node):
