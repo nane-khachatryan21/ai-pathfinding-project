@@ -82,7 +82,7 @@ A modern web application for visualizing pathfinding algorithms on real-world ro
    python server.py
    ```
    
-   The server will start on `http://localhost:5000`
+   The server will start on `http://localhost:5004`
 
 ### Frontend Setup
 

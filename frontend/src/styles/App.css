@@ -572,3 +572,191 @@ input {
   transition: all 0.2s ease;
 }
 
+/* Node Input Fields with Validation */
+.node-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.node-input-group:last-child {
+  margin-bottom: 0;
+}
+
+.node-input-group .node-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.input-with-validation {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.node-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  transition: all 0.2s ease;
+}
+
+.node-input::placeholder {
+  color: var(--text-muted);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-size: 12px;
+}
+
+.node-input:hover:not(:disabled) {
+  border-color: var(--border-hover);
+}
+
+.node-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.node-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.node-input.valid {
+  border-color: var(--accent-success);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.node-input.invalid {
+  border-color: var(--accent-error);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.btn-clear-input {
+  position: absolute;
+  right: 8px;
+  background: var(--accent-error);
+  border: none;
+  color: white;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-clear-input:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+/* Validation Messages */
+.validation-message {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.validation-message.valid {
+  color: var(--accent-success);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.validation-message.invalid {
+  color: var(--accent-error);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.validation-message.validating {
+  color: var(--accent-warning);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+/* Reachability Message */
+.reachability-message {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid;
+}
+
+.reachability-message.reachable {
+  color: var(--accent-success);
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.reachability-message.unreachable {
+  color: var(--accent-error);
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.reachability-message.checking {
+  color: var(--accent-warning);
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.reachability-message.error {
+  color: var(--accent-error);
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Collapsible Sections */
+.collapsible-header {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.collapsible-header:hover {
+  color: var(--accent-primary);
+}
+
+.collapsible-header .chevron {
+  font-size: 12px;
+  transition: transform 0.2s ease;
+  display: inline-block;
+  width: 16px;
+}
+
+.collapsible-content {
+  animation: slideDown 0.2s ease-out;
+  overflow: hidden;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+  }
+}
+

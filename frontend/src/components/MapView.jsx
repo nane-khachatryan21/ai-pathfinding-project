@@ -41,6 +41,8 @@ const MapView = () => {
     setStartNode,
     goalNode,
     setGoalNode,
+    handleStartNodeInputChange,
+    handleGoalNodeInputChange,
     getAccumulatedData,
     isSearching,
     searchCompleted,
@@ -97,9 +99,11 @@ const MapView = () => {
     // Only select if click is reasonably close (within 0.01 degrees)
     if (minDistance < 0.01) {
       if (!startNode) {
-        setStartNode(closestNode);
+        // Use the text input handler to trigger validation
+        handleStartNodeInputChange(closestNode);
       } else if (!goalNode && closestNode !== startNode) {
-        setGoalNode(closestNode);
+        // Use the text input handler to trigger validation
+        handleGoalNodeInputChange(closestNode);
       }
     }
   };

@@ -16,6 +16,13 @@ const ControlPanel = () => {
     setStartNode,
     goalNode,
     setGoalNode,
+    startNodeInput,
+    goalNodeInput,
+    handleStartNodeInputChange,
+    handleGoalNodeInputChange,
+    startNodeValidation,
+    goalNodeValidation,
+    reachabilityCheck,
     isSearching,
     searchCompleted,
     beginSearch,
@@ -30,11 +37,15 @@ const ControlPanel = () => {
     currentStep,
     searchSteps,
     goToStep,
+    getAccumulatedData,
   } = useSearch();
 
   const currentAlgo = algorithms.find(a => a.name === selectedAlgorithm);
   const needsHeuristic = currentAlgo?.requires_heuristic || false;
-  const canSearch = startNode && goalNode && !isSearching;
+  const canSearch = startNode && goalNode && !isSearching && 
+                    startNodeValidation.status === 'valid' && 
+                    goalNodeValidation.status === 'valid' &&
+                    reachabilityCheck.status !== 'unreachable';
 
   const handleGraphChange = (e) => {
     setSelectedGraph(e.target.value);
@@ -50,16 +61,20 @@ const ControlPanel = () => {
 
   const handleClearStart = () => {
     setStartNode(null);
+    handleStartNodeInputChange('');
   };
 
   const handleClearGoal = () => {
     setGoalNode(null);
+    handleGoalNodeInputChange('');
   };
 
   const handleReset = () => {
     resetSearch();
     setStartNode(null);
     setGoalNode(null);
+    handleStartNodeInputChange('');
+    handleGoalNodeInputChange('');
   };
 
   const handleSpeedChange = (e) => {
@@ -125,33 +140,70 @@ const ControlPanel = () => {
       <div className="control-section">
         <h3>Nodes</h3>
         <div className="node-selection">
-          <div className="node-item">
-            <span className="node-label">Start:</span>
-            <span className="node-value">
-              {startNode || 'Click on map'}
-            </span>
-            {startNode && !isSearching && (
-              <button onClick={handleClearStart} className="btn-clear">×</button>
+          <div className="node-input-group">
+            <label className="node-label">Start Node:</label>
+            <div className="input-with-validation">
+              <input
+                type="text"
+                value={startNodeInput}
+                onChange={(e) => handleStartNodeInputChange(e.target.value)}
+                placeholder="Enter node ID or click on map"
+                disabled={isSearching}
+                className={`node-input ${startNodeValidation.status === 'valid' ? 'valid' : ''} ${startNodeValidation.status === 'invalid' ? 'invalid' : ''}`}
+              />
+              {startNode && !isSearching && (
+                <button onClick={handleClearStart} className="btn-clear-input">×</button>
+              )}
+            </div>
+            {startNodeValidation.status !== 'idle' && (
+              <span className={`validation-message ${startNodeValidation.status}`}>
+                {startNodeValidation.message}
+              </span>
             )}
           </div>
-          <div className="node-item">
-            <span className="node-label">Goal:</span>
-            <span className="node-value">
-              {goalNode || 'Click on map'}
-            </span>
-            {goalNode && !isSearching && (
-              <button onClick={handleClearGoal} className="btn-clear">×</button>
+          
+          <div className="node-input-group">
+            <label className="node-label">Goal Node:</label>
+            <div className="input-with-validation">
+              <input
+                type="text"
+                value={goalNodeInput}
+                onChange={(e) => handleGoalNodeInputChange(e.target.value)}
+                placeholder="Enter node ID or click on map"
+                disabled={isSearching}
+                className={`node-input ${goalNodeValidation.status === 'valid' ? 'valid' : ''} ${goalNodeValidation.status === 'invalid' ? 'invalid' : ''}`}
+              />
+              {goalNode && !isSearching && (
+                <button onClick={handleClearGoal} className="btn-clear-input">×</button>
+              )}
+            </div>
+            {goalNodeValidation.status !== 'idle' && (
+              <span className={`validation-message ${goalNodeValidation.status}`}>
+                {goalNodeValidation.message}
+              </span>
             )}
           </div>
+
+          {reachabilityCheck.status !== 'idle' && (
+            <div className={`reachability-message ${reachabilityCheck.status}`}>
+              {reachabilityCheck.message}
+            </div>
+          )}
         </div>
       </div>
 
       <div className="control-section">
         <h3>Search Control</h3>
+        {reachabilityCheck.status === 'unreachable' && (
+          <div className="warning-message" style={{ marginBottom: '12px', padding: '10px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', fontSize: '12px', color: 'var(--accent-error)' }}>
+            ⚠ Cannot start search: {reachabilityCheck.message}
+          </div>
+        )}
         <button
           onClick={beginSearch}
           disabled={!canSearch}
           className="btn-primary"
+          title={!canSearch && reachabilityCheck.status === 'unreachable' ? reachabilityCheck.message : ''}
         >
           {isSearching ? 'Searching...' : 'Start Search'}
         </button>
@@ -164,7 +216,7 @@ const ControlPanel = () => {
         </button>
       </div>
 
-      {searchSteps.length > 0 && (
+      {searchCompleted && getAccumulatedData().hasSolution && (
         <>
           <div className="control-section">
             <h3>Animation</h3>

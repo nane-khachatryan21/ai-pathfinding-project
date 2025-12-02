@@ -6,9 +6,10 @@ Handles caching and simplification of graphs for efficient transfer.
 
 import pickle
 import os
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Set, Tuple
 from dataclasses import dataclass
 import json
+import networkx as nx
 
 
 @dataclass
@@ -151,6 +152,144 @@ class GraphManager:
             'nodes': nodes,
             'edges': edges
         }
+    
+    def find_node(self, graph_id: str, node_str: str) -> Optional[Any]:
+        """
+        Find a node in the graph, handling type conversions.
+        
+        Args:
+            graph_id: ID of the graph
+            node_str: Node ID as string
+            
+        Returns:
+            The actual node ID in the graph, or None if not found
+        """
+        graph = self.get_graph(graph_id)
+        if graph is None:
+            return None
+        
+        graph_nodes = list(graph.nodes())
+        
+        # Try direct match first (already correct type)
+        if node_str in graph_nodes:
+            return node_str
+        
+        # Try converting to int (common for OSMnx graphs)
+        try:
+            node_int = int(node_str)
+            if node_int in graph_nodes:
+                return node_int
+        except (ValueError, TypeError):
+            pass
+        
+        # For city-level graphs, try case-insensitive string match
+        node_str_lower = str(node_str).lower()
+        for node in graph_nodes:
+            if str(node).lower() == node_str_lower:
+                return node
+        
+        return None
+    
+    def validate_node(self, graph_id: str, node_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Validate if a node exists in the graph and return its details.
+        
+        Args:
+            graph_id: ID of the graph
+            node_id: Node ID to validate
+            
+        Returns:
+            Dictionary with node details if valid, None otherwise
+        """
+        graph = self.get_graph(graph_id)
+        if graph is None:
+            return None
+        
+        actual_node = self.find_node(graph_id, node_id)
+        if actual_node is None:
+            return None
+        
+        # Get node data
+        node_data = graph.nodes[actual_node]
+        
+        return {
+            'valid': True,
+            'node_id': str(actual_node),
+            'lat': node_data.get('y'),
+            'lon': node_data.get('x'),
+            'label': str(actual_node)
+        }
+    
+    def check_reachability(self, graph_id: str, start_node: str, goal_node: str) -> Dict[str, Any]:
+        """
+        Check if two nodes are reachable from each other.
+        
+        Args:
+            graph_id: ID of the graph
+            start_node: Start node ID
+            goal_node: Goal node ID
+            
+        Returns:
+            Dictionary with reachability information
+        """
+        graph = self.get_graph(graph_id)
+        if graph is None:
+            return {'reachable': False, 'error': 'Graph not found'}
+        
+        # Find actual nodes
+        actual_start = self.find_node(graph_id, start_node)
+        actual_goal = self.find_node(graph_id, goal_node)
+        
+        if actual_start is None:
+            return {'reachable': False, 'error': f'Start node "{start_node}" not found in graph'}
+        
+        if actual_goal is None:
+            return {'reachable': False, 'error': f'Goal node "{goal_node}" not found in graph'}
+        
+        # Check if nodes are in the same connected component
+        try:
+            # For directed graphs, check weak connectivity
+            if graph.is_directed():
+                # Convert to undirected for connectivity check
+                undirected = graph.to_undirected()
+                reachable = nx.has_path(undirected, actual_start, actual_goal)
+            else:
+                reachable = nx.has_path(graph, actual_start, actual_goal)
+            
+            if reachable:
+                return {
+                    'reachable': True,
+                    'start_node': str(actual_start),
+                    'goal_node': str(actual_goal)
+                }
+            else:
+                return {
+                    'reachable': False,
+                    'error': 'Nodes are not connected in the graph',
+                    'start_node': str(actual_start),
+                    'goal_node': str(actual_goal)
+                }
+        except Exception as e:
+            return {
+                'reachable': False,
+                'error': f'Error checking reachability: {str(e)}'
+            }
+    
+    def get_node_ids_set(self, graph_id: str) -> Optional[Set]:
+        """
+        Get a set of all node IDs in the graph for quick lookup.
+        
+        Args:
+            graph_id: ID of the graph
+            
+        Returns:
+            Set of node IDs or None if graph not found
+        """
+        graph = self.get_graph(graph_id)
+        if graph is None:
+            return None
+        
+        return set(graph.nodes())
 
 
 # Global graph manager instance

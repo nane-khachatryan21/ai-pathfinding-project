@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   fetchGraphs,
   fetchGraph,
@@ -6,6 +6,8 @@ import {
   fetchHeuristics,
   startSearch,
   fetchSearchSteps,
+  validateNode,
+  checkReachability,
 } from '../services/api';
 import animator from '../utils/animator';
 
@@ -31,6 +33,18 @@ export const SearchProvider = ({ children }) => {
   const [selectedHeuristic, setSelectedHeuristic] = useState(null);
   const [startNode, setStartNode] = useState(null);
   const [goalNode, setGoalNode] = useState(null);
+
+  // Node text input and validation
+  const [startNodeInput, setStartNodeInput] = useState('');
+  const [goalNodeInput, setGoalNodeInput] = useState('');
+  const [startNodeValidation, setStartNodeValidation] = useState({ status: 'idle', message: '' });
+  const [goalNodeValidation, setGoalNodeValidation] = useState({ status: 'idle', message: '' });
+  const [reachabilityCheck, setReachabilityCheck] = useState({ status: 'idle', message: '' });
+  const [searchError, setSearchError] = useState(null);
+  
+  // Refs for debouncing
+  const startNodeDebounceRef = useRef(null);
+  const goalNodeDebounceRef = useRef(null);
 
   // Graph data
   const [graphData, setGraphData] = useState(null);
@@ -116,6 +130,134 @@ export const SearchProvider = ({ children }) => {
     loadGraph();
   }, [selectedGraph]);
 
+  // Validate a node with debouncing
+  const validateNodeInput = useCallback(async (nodeId, isStart) => {
+    if (!selectedGraph || !nodeId.trim()) {
+      if (isStart) {
+        setStartNodeValidation({ status: 'idle', message: '' });
+      } else {
+        setGoalNodeValidation({ status: 'idle', message: '' });
+      }
+      return;
+    }
+
+    // Set validating status
+    if (isStart) {
+      setStartNodeValidation({ status: 'validating', message: 'Checking...' });
+    } else {
+      setGoalNodeValidation({ status: 'validating', message: 'Checking...' });
+    }
+
+    try {
+      const result = await validateNode(selectedGraph, nodeId);
+      
+      if (result.success && result.valid) {
+        if (isStart) {
+          setStartNode(result.node_id);
+          setStartNodeValidation({ status: 'valid', message: 'Valid node' });
+        } else {
+          setGoalNode(result.node_id);
+          setGoalNodeValidation({ status: 'valid', message: 'Valid node' });
+        }
+      } else {
+        if (isStart) {
+          setStartNode(null);
+          setStartNodeValidation({ status: 'invalid', message: result.error || 'Node not found' });
+        } else {
+          setGoalNode(null);
+          setGoalNodeValidation({ status: 'invalid', message: result.error || 'Node not found' });
+        }
+      }
+    } catch (error) {
+      if (isStart) {
+        setStartNode(null);
+        setStartNodeValidation({ status: 'invalid', message: 'Validation failed' });
+      } else {
+        setGoalNode(null);
+        setGoalNodeValidation({ status: 'invalid', message: 'Validation failed' });
+      }
+    }
+  }, [selectedGraph]);
+
+  // Handle start node input change with debouncing
+  const handleStartNodeInputChange = useCallback((value) => {
+    setStartNodeInput(value);
+    
+    // Clear previous timeout
+    if (startNodeDebounceRef.current) {
+      clearTimeout(startNodeDebounceRef.current);
+    }
+    
+    // Debounce validation
+    startNodeDebounceRef.current = setTimeout(() => {
+      validateNodeInput(value, true);
+    }, 500);
+  }, [validateNodeInput]);
+
+  // Handle goal node input change with debouncing
+  const handleGoalNodeInputChange = useCallback((value) => {
+    setGoalNodeInput(value);
+    
+    // Clear previous timeout
+    if (goalNodeDebounceRef.current) {
+      clearTimeout(goalNodeDebounceRef.current);
+    }
+    
+    // Debounce validation
+    goalNodeDebounceRef.current = setTimeout(() => {
+      validateNodeInput(value, false);
+    }, 500);
+  }, [validateNodeInput]);
+
+  // Check reachability between start and goal
+  const checkNodesReachability = useCallback(async () => {
+    if (!selectedGraph || !startNode || !goalNode) {
+      setReachabilityCheck({ status: 'idle', message: '' });
+      return;
+    }
+
+    setReachabilityCheck({ status: 'checking', message: 'Checking connectivity...' });
+
+    try {
+      const result = await checkReachability(selectedGraph, startNode, goalNode);
+      
+      if (result.success && result.reachable) {
+        setReachabilityCheck({ status: 'reachable', message: 'Nodes are connected' });
+      } else {
+        setReachabilityCheck({ 
+          status: 'unreachable', 
+          message: result.error || 'Nodes are not connected' 
+        });
+      }
+    } catch (error) {
+      setReachabilityCheck({ status: 'error', message: 'Failed to check connectivity' });
+    }
+  }, [selectedGraph, startNode, goalNode]);
+
+  // Check reachability when both nodes are selected
+  useEffect(() => {
+    if (startNode && goalNode) {
+      checkNodesReachability();
+    } else {
+      setReachabilityCheck({ status: 'idle', message: '' });
+    }
+  }, [startNode, goalNode, checkNodesReachability]);
+
+  // Update text inputs when nodes are selected via map
+  useEffect(() => {
+    if (startNode && startNode !== startNodeInput) {
+      setStartNodeInput(startNode);
+      setStartNodeValidation({ status: 'valid', message: 'Valid node' });
+    }
+  }, [startNode]);
+
+  useEffect(() => {
+    if (goalNode && goalNode !== goalNodeInput) {
+      setGoalNodeInput(goalNode);
+      setGoalNodeValidation({ status: 'valid', message: 'Valid node' });
+    }
+  }, [goalNode]);
+
   // Start a new search
   const beginSearch = useCallback(async () => {
     if (!selectedGraph || !selectedAlgorithm || !startNode || !goalNode) {
@@ -134,6 +276,7 @@ export const SearchProvider = ({ children }) => {
       setSearchCompleted(false);
       setSearchSteps([]);
       setCurrentStep(0);
+      setSearchError(null); // Clear any previous errors
 
       const searchParams = {
         graph_id: selectedGraph,
@@ -154,6 +297,7 @@ export const SearchProvider = ({ children }) => {
     } catch (error) {
       console.error('Failed to start search:', error);
       setIsSearching(false);
+      setSearchError(error.message || 'Failed to start search');
     }
   }, [selectedGraph, selectedAlgorithm, selectedHeuristic, startNode, goalNode, algorithms]);
 
@@ -174,12 +318,24 @@ export const SearchProvider = ({ children }) => {
             setIsSearching(false);
             setSearchCompleted(true);
             setIsPlaying(false);
+            
+            // Check for backend error
+            if (response.error) {
+              setSearchError(response.error);
+              console.error('Search error:', response.error);
+            }
+            
+            // Advance to the last step to show final results
+            if (response.total_steps > 0) {
+              setCurrentStep(response.total_steps - 1);
+            }
           }
         }
       } catch (error) {
         console.error('Failed to fetch search steps:', error);
         clearInterval(pollInterval);
         setIsSearching(false);
+        setSearchError(error.message || 'Failed to fetch search results');
       }
     }, 100); // Poll every 100ms
   }, []);
@@ -192,6 +348,8 @@ export const SearchProvider = ({ children }) => {
     setIsSearching(false);
     setSearchCompleted(false);
     setIsPlaying(false);
+    setReachabilityCheck({ status: 'idle', message: '' });
+    setSearchError(null);
   }, []);
 
   // Animation controls
@@ -248,6 +406,11 @@ export const SearchProvider = ({ children }) => {
     return null;
   }, [currentStep, searchSteps]);
 
+  // Check if solution exists in the entire search
+  const hasSolution = useCallback(() => {
+    return searchSteps.some(step => step.event === 'goal_found' && step.solution_path && step.solution_path.length > 0);
+  }, [searchSteps]);
+
   // Get accumulated data up to current step
   const getAccumulatedData = useCallback(() => {
     const frontier = new Set();
@@ -282,8 +445,9 @@ export const SearchProvider = ({ children }) => {
       frontier: Array.from(frontier),
       expanded: Array.from(expanded),
       solutionPath,
+      hasSolution: hasSolution(),
     };
-  }, [currentStep, searchSteps]);
+  }, [currentStep, searchSteps, hasSolution]);
 
   const value = {
     // Available options
@@ -303,6 +467,15 @@ export const SearchProvider = ({ children }) => {
     goalNode,
     setGoalNode,
 
+    // Node input and validation
+    startNodeInput,
+    goalNodeInput,
+    handleStartNodeInputChange,
+    handleGoalNodeInputChange,
+    startNodeValidation,
+    goalNodeValidation,
+    reachabilityCheck,
+
     // Graph data
     graphData,
     loading,
@@ -313,6 +486,7 @@ export const SearchProvider = ({ children }) => {
     currentStep,
     isSearching,
     searchCompleted,
+    searchError,
 
     // Animation
     isPlaying,

@@ -10,10 +10,15 @@ const StatsPanel = () => {
     searchCompleted,
     getCurrentStepData,
     getAccumulatedData,
+    reachabilityCheck,
+    searchError,
   } = useSearch();
+
+  const [isGraphInfoCollapsed, setIsGraphInfoCollapsed] = React.useState(false);
 
   const currentStepData = getCurrentStepData();
   const accumulatedData = getAccumulatedData();
+  const hasSolution = accumulatedData.hasSolution;
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -34,35 +39,46 @@ const StatsPanel = () => {
     };
 
     // Add path info if solution found
-    if (searchCompleted && accumulatedData.solutionPath.length > 0) {
-      result.searchInfo.pathLength = accumulatedData.solutionPath.length;
-      
-      // Get final step cost
-      const finalStep = searchSteps[searchSteps.length - 1];
-      if (finalStep && finalStep.path_cost !== undefined) {
-        result.searchInfo.pathCost = finalStep.path_cost;
+    if (searchCompleted && hasSolution) {
+      // Find the goal_found step to get the solution details
+      const goalStep = searchSteps.find(step => step.event === 'goal_found');
+      if (goalStep && goalStep.solution_path) {
+        result.searchInfo.pathLength = goalStep.solution_path.length;
+        if (goalStep.path_cost !== undefined) {
+          result.searchInfo.pathCost = goalStep.path_cost;
+        }
       }
     }
 
     return result;
-  }, [graphData, searchSteps, currentStep, accumulatedData, currentStepData, searchCompleted]);
+  }, [graphData, searchSteps, currentStep, accumulatedData, currentStepData, searchCompleted, hasSolution]);
 
   return (
     <div className="stats-panel">
       <div className="stats-section">
-        <h3>Graph Information</h3>
-        <div className="stat-item">
-          <span className="stat-label">Graph:</span>
-          <span className="stat-value">{stats.graphInfo.name}</span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-label">Nodes:</span>
-          <span className="stat-value">{stats.graphInfo.nodeCount.toLocaleString()}</span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-label">Edges:</span>
-          <span className="stat-value">{stats.graphInfo.edgeCount.toLocaleString()}</span>
-        </div>
+        <h3 
+          className="collapsible-header" 
+          onClick={() => setIsGraphInfoCollapsed(!isGraphInfoCollapsed)}
+        >
+          <span className="chevron">{isGraphInfoCollapsed ? '▶' : '▼'}</span>
+          Graph Information
+        </h3>
+        {!isGraphInfoCollapsed && (
+          <div className="collapsible-content">
+            <div className="stat-item">
+              <span className="stat-label">Graph:</span>
+              <span className="stat-value">{stats.graphInfo.name}</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Nodes:</span>
+              <span className="stat-value">{stats.graphInfo.nodeCount.toLocaleString()}</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Edges:</span>
+              <span className="stat-value">{stats.graphInfo.edgeCount.toLocaleString()}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {searchSteps.length > 0 && (
@@ -122,7 +138,7 @@ const StatsPanel = () => {
         </div>
       )}
 
-      {searchCompleted && accumulatedData.solutionPath.length > 0 && (
+      {searchCompleted && hasSolution && (
         <div className="stats-section">
           <div className="success-message">
             ✓ Solution Found!
@@ -130,10 +146,21 @@ const StatsPanel = () => {
         </div>
       )}
 
-      {searchCompleted && accumulatedData.solutionPath.length === 0 && (
+      {searchCompleted && !hasSolution && (
         <div className="stats-section">
           <div className="error-message">
-            ✗ No Solution Found
+            <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+              ✗ No Solution Found
+            </div>
+            <div style={{ fontSize: '12px', fontWeight: 'normal', lineHeight: '1.4' }}>
+              {searchError 
+                ? `Error: ${searchError}`
+                : reachabilityCheck.status === 'unreachable' 
+                ? 'The selected nodes are not connected in the graph. Please select different nodes that are part of the same network.'
+                : searchSteps.length === 0
+                ? 'The search failed to start. Please check your node selections and try again.'
+                : 'The algorithm could not find a path between the selected nodes. This may indicate that the nodes are in disconnected components of the graph.'}
+            </div>
           </div>
         </div>
       )}

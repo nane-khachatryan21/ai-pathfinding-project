@@ -15,25 +15,25 @@ Before testing, ensure:
 
 #### Test Health Endpoint
 ```bash
-curl http://localhost:5000/api/health
+curl http://localhost:5004/api/health
 ```
 Expected: JSON response with `success: true` and counts of available graphs/algorithms
 
 #### Test Graphs Endpoint
 ```bash
-curl http://localhost:5000/api/graphs
+curl http://localhost:5004/api/graphs
 ```
 Expected: List of 3 graphs (Armenia Cities, Armenia Cities & Villages, Yerevan)
 
 #### Test Algorithms Endpoint
 ```bash
-curl http://localhost:5000/api/algorithms
+curl http://localhost:5004/api/algorithms
 ```
 Expected: List of 7 algorithms (UCS, A*, Bidirectional, BFS Graph, BFS Tree, DFS Graph, DFS Tree)
 
 #### Test Heuristics Endpoint
 ```bash
-curl http://localhost:5000/api/heuristics
+curl http://localhost:5004/api/heuristics
 ```
 Expected: List of heuristics (at minimum: Euclidean/Haversine)
 

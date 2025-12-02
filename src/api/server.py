@@ -73,6 +73,66 @@ def get_graph(graph_id):
         }), 500
 
 
+@app.route('/api/graph/<graph_id>/validate_node/<node_id>', methods=['GET'])
+def validate_node(graph_id, node_id):
+    """Validate if a node exists in the graph."""
+    try:
+        result = graph_manager.validate_node(graph_id, node_id)
+        
+        if result is None:
+            return jsonify({
+                'success': False,
+                'valid': False,
+                'error': f'Node "{node_id}" not found in graph'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            **result
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'valid': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/graph/<graph_id>/check_reachability', methods=['POST'])
+def check_reachability(graph_id):
+    """Check if two nodes are reachable from each other."""
+    try:
+        data = request.get_json()
+        
+        if 'start_node' not in data or 'goal_node' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing start_node or goal_node'
+            }), 400
+        
+        result = graph_manager.check_reachability(
+            graph_id, 
+            data['start_node'], 
+            data['goal_node']
+        )
+        
+        if 'error' in result:
+            return jsonify({
+                'success': False,
+                **result
+            }), 400
+        
+        return jsonify({
+            'success': True,
+            **result
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/api/algorithms', methods=['GET'])
 def list_algorithms():
     """List all available search algorithms."""
@@ -160,25 +220,9 @@ def start_search():
                 'error': f'Graph {graph_id} not found'
             }), 404
         
-        # Convert node IDs back to original types (they might be strings from JSON)
-        # Try to find matching nodes
-        graph_nodes = list(graph.nodes())
-        
-        def find_node(node_str):
-            # Try direct match first
-            if node_str in graph_nodes:
-                return node_str
-            # Try converting to int
-            try:
-                node_int = int(node_str)
-                if node_int in graph_nodes:
-                    return node_int
-            except:
-                pass
-            return None
-        
-        start_node_id = find_node(start_node)
-        goal_node_id = find_node(goal_node)
+        # Use improved find_node from graph_manager
+        start_node_id = graph_manager.find_node(graph_id, start_node)
+        goal_node_id = graph_manager.find_node(graph_id, goal_node)
         
         if start_node_id is None:
             return jsonify({
@@ -400,7 +444,7 @@ if __name__ == '__main__':
         heur = " (requires heuristic)" if algo.requires_heuristic else ""
         print(f"  - {algo.display_name}{heur}")
     
-    print("\nStarting server on http://localhost:5000")
+    print("\nStarting server on http://localhost:5004")
     print("=" * 60)
     
     app.run(host='0.0.0.0', port=5004, debug=True, threaded=True)
