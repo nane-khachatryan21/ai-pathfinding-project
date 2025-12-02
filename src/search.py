@@ -215,7 +215,7 @@ class BreadthFirstTreeSearch(Search):
                 new_state = node.state.get_action_result(action)
                 child = Node(node, action, new_state)
                 if goal_test.is_goal(new_state):
-                    return child;
+                    return child
                 self._frontier.add_node(child)
                 self._number_of_nodes += 1
         return None
@@ -246,7 +246,7 @@ class BreadthFirstGraphSearch(Search):
                 new_state = node.state.get_action_result(action)
                 child = Node(node, action, new_state)
                 if goal_test.is_goal(new_state):
-                    return child;
+                    return child
                 if new_state not in reached_states:
                     reached_states.add(new_state)
                     self._frontier.add_node(child)
@@ -258,7 +258,6 @@ class BreadthFirstGraphSearch(Search):
 
     def get_frontier(self):
         return self._frontier
-
 
 
 

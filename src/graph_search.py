@@ -1,5 +1,6 @@
 # graph_search.py
 import math
+import heapq
 
 from search import (
     State,
@@ -166,6 +167,22 @@ class AStarGraphSearch(Search):
         return self._frontier
 
 
+
+
+
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371000.0
+    # Convert degrees to radians
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+
+    a = (math.sin(dphi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda/2)**2)
+    c = 2*math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+    
+
 def build_euclidean_heuristic(graph, goal_node_id):
     """
     Returns a heuristic function h(state) that estimates
@@ -180,7 +197,6 @@ def build_euclidean_heuristic(graph, goal_node_id):
 
     # Earth radius in meters
     R = 6371000.0
-
     def haversine(lat1, lon1, lat2, lon2):
         # Convert degrees to radians
         phi1 = math.radians(lat1)
@@ -376,3 +392,267 @@ class BidirectionalGraphSearch(Search):
     
     def get_expanded_node_count(self):
         return self._expanded_node_count
+    
+
+
+
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371000.0
+    # Convert degrees to radians
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+
+    a = (math.sin(dphi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda/2)**2)
+    c = 2*math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+
+import networkx as nx
+from collections import deque
+
+from collections import deque
+
+class EdgeCostChanger:
+    """
+    Simple edge-cost changer for D* Lite.
+    Currently needs manuall setup
+    Further finalization needed
+    """
+
+    def __init__(self, G, node=None, time_to_block=1000, radius=2, factor=10.0, weight_key="length"):
+        self.G = G
+        self.node_to_block = node
+        self.time_to_block = time_to_block
+        self.radius = radius
+        self.factor = factor
+        self.weight_key = weight_key
+
+        self._t = 0
+        self._already_changed = False   # so we only change once, for now
+
+    def change_state(self, mode="manual"):
+        self._t += 1
+        if self._t < self.time_to_block:
+            return []
+
+        changed_edges = self._inflate_edge_costs()
+        self._already_changed = True
+        return changed_edges
+
+    def _inflate_edge_costs(self):
+        G = self.G
+        node = self.node_to_block
+        radius = self.radius
+        factor = self.factor
+        weight_key = self.weight_key
+
+
+        visited = {node}
+        queue = deque([(node, 0)])
+
+        while queue:
+            node, dist = queue.popleft()
+            if dist >= radius:
+                continue
+            for nbr in G.neighbors(node):
+                if nbr not in visited:
+                    visited.add(nbr)
+                    queue.append((nbr, dist + 1))
+
+        nodes_within_radius = visited
+
+
+        changed_edges = set()
+        for u, v, k, d in G.edges(keys=True, data=True):
+            if u in nodes_within_radius or v in nodes_within_radius:
+                if weight_key in d:
+                    d[weight_key] *= factor
+                    changed_edges.add((u, v))
+
+        return list(changed_edges)
+
+
+
+class DStarNode:
+    def __init__(self, node_id):
+        self.id = node_id
+        self.g = float("inf")
+        self.rhs = float("inf")
+        self.key = (float("inf"), float("inf"))
+        self.succ = set()
+        self.pred = set()
+
+    # def __lt__(self, other):
+    #     return self.key < other.key
+
+
+class DStarPriorityQueue:
+    def __init__(self):
+        self.heap = []
+        self.entry_finder = {}  # node_id → key
+
+    def insert(self, node):
+        self.entry_finder[node.id] = node.key
+        heapq.heappush(self.heap, (node.key, node.id, node))
+
+    def pop(self):
+        while self.heap:
+            key, _, node = heapq.heappop(self.heap)
+            if self.entry_finder.get(node.id) == key: #careful 
+                del self.entry_finder[node.id]
+                return node
+        return None  # empty
+
+    # def top_key(self):
+    #     if not self.heap:
+    #         return (float("inf"), float("inf"))
+    #     return self.heap[0][0]
+
+    def top_key(self):
+        while self.heap:
+            key, node_id, node = self.heap[0]
+            if self.entry_finder.get(node_id) == key:
+                return key
+            heapq.heappop(self.heap)  # discard stale entry
+        return (float("inf"), float("inf"))
+    
+    def remove(self, node):
+        if node.id in self.entry_finder:
+            del self.entry_finder[node.id]
+    
+    def contains(self, node):
+        return node.id in self.entry_finder
+
+
+class DStarSearch(Search):
+    def __init__(self, G, start_id, goal_id, edge_cost_changer: EdgeCostChanger):
+        
+        self.graph = G
+
+        self.edge_scheduler = edge_cost_changer
+        self.nodes = {}
+        for node_id in self.graph.nodes:
+            node = DStarNode(node_id)
+            # sucessors
+            node.succ = set(self.graph.successors(node_id))  # our G already supports sucessors and predesessors functions returning ids
+            # predecessors
+            node.pred = set(self.graph.predecessors(node_id))
+            self.nodes[node_id] = node
+
+        self.start:DStarNode = self.nodes[start_id]
+        self.goal:DStarNode = self.nodes[goal_id]
+        self.last = self.start
+
+        self.heuristic = self._dstar_h
+        # procedure Initialize
+        self.U = DStarPriorityQueue()
+        self.km = 0
+        self.goal.rhs = 0
+        self.goal.key = self.calculate_key(self.goal)
+        self.U.insert(self.goal)
+        self.path_cost = 0
+
+        
+    def _cost(self, u: DStarNode, v_id):
+        edge_data = self.graph.get_edge_data(u.id, v_id)
+        if not edge_data:
+            return float("inf")
+        key = next(iter(edge_data.keys())) #list(edge_data.keys())[0]
+        return edge_data[key]["length"]
+    
+    def _dstar_h(self, u: DStarNode, v: DStarNode):
+        data_u = self.graph.nodes[u.id]
+        data_v = self.graph.nodes[v.id]
+
+        lat1, lon1 = data_u["y"], data_u["x"]
+        lat2, lon2 = data_v["y"], data_v["x"]
+
+        return haversine(lat1, lon1, lat2, lon2)
+
+    def calculate_key(self, u: DStarNode):
+        val = min(u.g, u.rhs)
+        return (val + self.heuristic(u, self.start) + self.km, val)
+
+    def update_vertex(self, u: DStarNode):
+        if u.id != self.goal.id:
+            min_val = float("inf")
+            for succ in u.succ:
+                value = self._cost(u, succ) + self.nodes[succ].g
+                if value < min_val:
+                    min_val = value
+            u.rhs = min_val
+
+        if self.U.contains(u):
+            self.U.remove(u)    
+
+        if u.g != u.rhs:
+            u.key = self.calculate_key(u)
+            self.U.insert(u)
+        
+    def compute_shortest_path(self):
+        while self.U.top_key() < self.calculate_key(self.start) or self.start.rhs != self.start.g:
+
+            u = self.U.pop()
+            if not u:
+                return
+            k_old = u.key
+            k_new = self.calculate_key(u)
+            if not u:
+                return
+            if k_old < k_new:
+                u.key = k_new
+                self.U.insert(u)
+
+            elif u.g > u.rhs:
+                u.g = u.rhs
+                for pred in u.pred:
+                    self.update_vertex(self.nodes[pred])
+            else:
+                u.g = float("inf")
+                for pred in u.pred:
+                    self.update_vertex(self.nodes[pred])
+                self.update_vertex(u)
+    
+
+    def main(self):
+        self.compute_shortest_path()
+        path = []
+
+        while self.start.id != self.goal.id:
+            if self.start.g == float("inf"):
+                print('path does not exist')
+                return path
+
+            self._make_move()
+            path.append(self.start.id)
+
+            changed_edges = self.edge_scheduler.change_state()
+            if changed_edges:
+                self.km = self.km + self.heuristic(self.last, self.start)
+                self.last = self.start
+
+                for (u_id, v_id) in changed_edges:  
+                    u = self.nodes[v_id]
+                    self.update_vertex(u)
+                self.compute_shortest_path()
+        
+        print(f'Path Cost: {self.path_cost}')
+        return path, changed_edges
+
+    def _make_move(self):
+        best = None
+        best_val = float("inf")
+        for s_id in self.start.succ:
+            cost_val = self._cost(self.start, s_id) + self.nodes[s_id].g
+            if cost_val < best_val:
+                best_val = cost_val
+                best = self.nodes[s_id]
+        
+        self.path_cost += self._cost(self.start, best.id)
+        self.start = best
+
+        return 
+        
+        
