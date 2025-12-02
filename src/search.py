@@ -202,19 +202,28 @@ class BreadthFirstTreeSearch(Search):
     def __init__(self):
         self._frontier = BreadthFirstFrontier()
 
-    def find_solution(self, initial_state, goal_test):
+    def find_solution(self, initial_state, goal_test, callback=None):
         node = Node(None, None, initial_state)
         self._number_of_nodes = 1
         if goal_test.is_goal(node.state):
             return node
         self._frontier.clear()
         self._frontier.add_node(node)
+        expanded = set()
         while self._frontier:
             node = self._frontier.remove_node()
+            expanded.add(node.state)
+            
+            if callback:
+                frontier_states = [n.state for n in self._frontier._queue]
+                callback(event='node_expanded', node=node, frontier=frontier_states, expanded=expanded)
+            
             for action in node.state.get_applicable_actions():
                 new_state = node.state.get_action_result(action)
                 child = Node(node, action, new_state)
                 if goal_test.is_goal(new_state):
+                    if callback:
+                        callback(event='goal_found', node=child, frontier=[], expanded=expanded)
                     return child;
                 self._frontier.add_node(child)
                 self._number_of_nodes += 1
@@ -231,7 +240,7 @@ class BreadthFirstGraphSearch(Search):
     def __init__(self):
         self._frontier = BreadthFirstFrontier()
 
-    def find_solution(self, initial_state, goal_test):
+    def find_solution(self, initial_state, goal_test, callback=None):
         node = Node(None, None, initial_state)
         self._number_of_nodes = 1
         if goal_test.is_goal(node.state):
@@ -240,12 +249,21 @@ class BreadthFirstGraphSearch(Search):
         self._frontier.add_node(node)
         reached_states = set()
         reached_states.add(initial_state)
+        expanded = set()
         while self._frontier:
             node = self._frontier.remove_node()
+            expanded.add(node.state)
+            
+            if callback:
+                frontier_states = [n.state for n in self._frontier._queue]
+                callback(event='node_expanded', node=node, frontier=frontier_states, expanded=expanded)
+            
             for action in node.state.get_applicable_actions():
                 new_state = node.state.get_action_result(action)
                 child = Node(node, action, new_state)
                 if goal_test.is_goal(new_state):
+                    if callback:
+                        callback(event='goal_found', node=child, frontier=[], expanded=expanded)
                     return child;
                 if new_state not in reached_states:
                     reached_states.add(new_state)

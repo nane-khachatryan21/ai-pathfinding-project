@@ -78,7 +78,7 @@ class UCSGraphSearch(Search):
     def __init__(self):
         self._frontier = BestFirstFrontier(UCSFunction())
 
-    def find_solution(self, initial_state, goal_test):
+    def find_solution(self, initial_state, goal_test, callback=None):
         self._number_of_nodes = 1
         self._frontier.clear()
         start_node = Node(None, None, initial_state)
@@ -93,7 +93,16 @@ class UCSGraphSearch(Search):
                 continue
 
             if goal_test.is_goal(node.state):
+                if callback:
+                    callback(event='goal_found', node=node, frontier=list(self._frontier._queue), 
+                            expanded=set(reached_states.keys()), solution_path=extract_node_id_path(node))
                 return node
+
+            # Invoke callback on node expansion
+            if callback:
+                frontier_nodes = [n.state.node_id for n in self._frontier._queue]
+                callback(event='node_expanded', node=node, frontier=frontier_nodes, 
+                        expanded=set(reached_states.keys()))
 
             for action in node.state.get_applicable_actions():
                 new_state = node.state.get_action_result(action)
@@ -119,9 +128,10 @@ class AStarGraphSearch(Search):
         self._frontier = None
         self._expanded_node_count = 0
 
-    def find_solution(self, initial_state, goal_test, heuristic):
+    def find_solution(self, initial_state, goal_test, heuristic, callback=None):
         """
         heuristic: callable taking a state (GraphState) and returning a non-negative estimate
+        callback: optional function to call on each node expansion
         """
         self._expanded_node_count = 0
 
@@ -145,7 +155,16 @@ class AStarGraphSearch(Search):
             self._expanded_node_count += 1
 
             if goal_test.is_goal(node.state):
+                if callback:
+                    callback(event='goal_found', node=node, frontier=list(self._frontier._queue),
+                            expanded=set(best_g.keys()), solution_path=extract_node_id_path(node))
                 return node
+
+            # Invoke callback on node expansion
+            if callback:
+                frontier_nodes = [n.state.node_id for n in self._frontier._queue]
+                callback(event='node_expanded', node=node, frontier=frontier_nodes,
+                        expanded=set(best_g.keys()))
 
             for action in node.state.get_applicable_actions():
                 new_state = node.state.get_action_result(action)
@@ -257,7 +276,7 @@ class BidirectionalGraphSearch(Search):
         return current_node
 
 
-    def find_solution(self, initial_state, goal_test):
+    def find_solution(self, initial_state, goal_test, callback=None):
         self._expanded_node_count = 0
         goal_node_id = goal_test.get_goal_node()
 
@@ -327,6 +346,15 @@ class BidirectionalGraphSearch(Search):
 
             self._expanded_node_count += 1
 
+            # Invoke callback on node expansion
+            if callback:
+                fwd_frontier_nodes = [n.state.node_id for n in self._forward_frontier._queue]
+                bwd_frontier_nodes = [n.state.node_id for n in self._backward_frontier._queue]
+                all_expanded = set(list(fwd_reached.keys()) + list(bwd_reached.keys()))
+                callback(event='node_expanded', node=current, 
+                        frontier=fwd_frontier_nodes + bwd_frontier_nodes,
+                        expanded=all_expanded, direction=direction)
+
             if direction == "forward":
                 for action in current.state.get_applicable_actions():
                     child_state = current.state.get_action_result(action)
@@ -372,6 +400,12 @@ class BidirectionalGraphSearch(Search):
         # Reconstruct path as a list of node_ids
         final_path_node_sequence = self._reconstruct_bidirectional_path(fwd_meeting_node, bwd_meeting_node)
         goal_node = self._build_node_chain(G, final_path_node_sequence)
+        
+        if callback:
+            callback(event='goal_found', node=goal_node, 
+                    frontier=[], expanded=set(list(fwd_reached.keys()) + list(bwd_reached.keys())),
+                    solution_path=final_path_node_sequence)
+        
         return goal_node
     
     def get_expanded_node_count(self):
