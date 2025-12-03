@@ -44,6 +44,7 @@ const MapView = () => {
     handleStartNodeInputChange,
     handleGoalNodeInputChange,
     getAccumulatedData,
+    getCurrentStepData,
     isSearching,
     searchCompleted,
   } = useSearch();
@@ -110,6 +111,8 @@ const MapView = () => {
 
   // Get visualization data
   const accumulatedData = getAccumulatedData();
+  const currentStepData = getCurrentStepData();
+  const currentNodeId = currentStepData?.current_node;
 
   if (!graphData) {
     return (
@@ -178,7 +181,7 @@ const MapView = () => {
             <CircleMarker
               key={`expanded-${nodeId}`}
               center={pos}
-              radius={3}
+              radius={4.5}
               fillColor="#4a90e2"
               color="#2a5a8a"
               weight={1}
@@ -192,12 +195,12 @@ const MapView = () => {
       {/* Draw frontier nodes */}
       {accumulatedData.frontier.map(nodeId => {
         const pos = nodePositions[nodeId];
-        if (pos && nodeId !== startNode && nodeId !== goalNode) {
+        if (pos && nodeId !== startNode && nodeId !== goalNode && nodeId !== currentNodeId) {
           return (
             <CircleMarker
               key={`frontier-${nodeId}`}
               center={pos}
-              radius={4}
+              radius={6}
               fillColor="#ffa500"
               color="#ff6600"
               weight={2}
@@ -209,11 +212,25 @@ const MapView = () => {
         return null;
       })}
 
+      {/* Draw current node being expanded */}
+      {currentNodeId && nodePositions[currentNodeId] && currentNodeId !== startNode && currentNodeId !== goalNode && (
+        <CircleMarker
+          key={`current-${currentNodeId}`}
+          center={nodePositions[currentNodeId]}
+          radius={7.5}
+          fillColor="#FFD700"
+          color="#FFA500"
+          weight={3}
+          fillOpacity={1}
+          className="current-node"
+        />
+      )}
+
       {/* Draw start node */}
       {startNode && nodePositions[startNode] && (
         <CircleMarker
           center={nodePositions[startNode]}
-          radius={6}
+          radius={9}
           fillColor="#00ff00"
           color="#00aa00"
           weight={2}
@@ -225,7 +242,7 @@ const MapView = () => {
       {goalNode && nodePositions[goalNode] && (
         <CircleMarker
           center={nodePositions[goalNode]}
-          radius={6}
+          radius={9}
           fillColor="#ff0000"
           color="#aa0000"
           weight={2}

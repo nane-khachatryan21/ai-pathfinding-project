@@ -15,6 +15,7 @@ const StatsPanel = () => {
   } = useSearch();
 
   const [isGraphInfoCollapsed, setIsGraphInfoCollapsed] = React.useState(false);
+  const [isSearchStatsCollapsed, setIsSearchStatsCollapsed] = React.useState(false);
 
   const currentStepData = getCurrentStepData();
   const accumulatedData = getAccumulatedData();
@@ -83,47 +84,57 @@ const StatsPanel = () => {
 
       {searchSteps.length > 0 && (
         <div className="stats-section">
-          <h3>Search Statistics</h3>
-          <div className="stat-item">
-            <span className="stat-label">Step:</span>
-            <span className="stat-value">
-              {stats.searchInfo.currentStep} / {stats.searchInfo.totalSteps}
-            </span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Expanded:</span>
-            <span className="stat-value stat-expanded">
-              {stats.searchInfo.nodesExpanded}
-            </span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Frontier:</span>
-            <span className="stat-value stat-frontier">
-              {stats.searchInfo.frontierSize}
-            </span>
-          </div>
-          {currentStepData && currentStepData.path_cost !== undefined && (
-            <div className="stat-item">
-              <span className="stat-label">Current Cost:</span>
-              <span className="stat-value">
-                {currentStepData.path_cost.toFixed(2)} m
-              </span>
-            </div>
-          )}
-          {stats.searchInfo.pathLength && (
-            <div className="stat-item">
-              <span className="stat-label">Path Length:</span>
-              <span className="stat-value stat-solution">
-                {stats.searchInfo.pathLength} nodes
-              </span>
-            </div>
-          )}
-          {stats.searchInfo.pathCost !== null && (
-            <div className="stat-item">
-              <span className="stat-label">Path Cost:</span>
-              <span className="stat-value stat-solution">
-                {stats.searchInfo.pathCost.toFixed(2)} m
-              </span>
+          <h3 
+            className="collapsible-header" 
+            onClick={() => setIsSearchStatsCollapsed(!isSearchStatsCollapsed)}
+          >
+            <span className="chevron">{isSearchStatsCollapsed ? '▶' : '▼'}</span>
+            Search Statistics
+          </h3>
+          {!isSearchStatsCollapsed && (
+            <div className="collapsible-content">
+              <div className="stat-item">
+                <span className="stat-label">Step:</span>
+                <span className="stat-value">
+                  {stats.searchInfo.currentStep} / {stats.searchInfo.totalSteps}
+                </span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">Expanded:</span>
+                <span className="stat-value stat-expanded">
+                  {stats.searchInfo.nodesExpanded}
+                </span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">Frontier:</span>
+                <span className="stat-value stat-frontier">
+                  {stats.searchInfo.frontierSize}
+                </span>
+              </div>
+              {currentStepData && currentStepData.path_cost !== undefined && (
+                <div className="stat-item">
+                  <span className="stat-label">Current Cost:</span>
+                  <span className="stat-value">
+                    {currentStepData.path_cost.toFixed(2)} m
+                  </span>
+                </div>
+              )}
+              {stats.searchInfo.pathLength && (
+                <div className="stat-item">
+                  <span className="stat-label">Path Length:</span>
+                  <span className="stat-value stat-solution">
+                    {stats.searchInfo.pathLength} nodes
+                  </span>
+                </div>
+              )}
+              {stats.searchInfo.pathCost !== null && (
+                <div className="stat-item">
+                  <span className="stat-label">Path Cost:</span>
+                  <span className="stat-value stat-solution">
+                    {stats.searchInfo.pathCost.toFixed(2)} m
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>

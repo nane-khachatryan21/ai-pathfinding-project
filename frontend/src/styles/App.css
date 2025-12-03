@@ -484,36 +484,20 @@ body {
   color: var(--accent-primary) !important;
 }
 
-/* Frontier Node Pulsing Animation */
+/* Frontier Node - No Animation */
 .frontier-node {
-  animation: pulse 1.5s ease-in-out infinite;
+  /* Animation removed for cleaner visualization */
 }
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 0.8;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.2);
-  }
+/* Current Node Being Expanded - No Animation */
+.current-node {
+  z-index: 1000 !important;
+  /* Animation removed for cleaner visualization */
 }
 
-/* Solution Path Animation */
+/* Solution Path - No Animation */
 .solution-path {
-  animation: pathDraw 1s ease-out;
-}
-
-@keyframes pathDraw {
-  from {
-    stroke-dasharray: 1000;
-    stroke-dashoffset: 1000;
-  }
-  to {
-    stroke-dasharray: 1000;
-    stroke-dashoffset: 0;
-  }
+  /* Animation removed for cleaner visualization */
 }
 
 /* Scrollbar Styling */

@@ -112,6 +112,7 @@ def initialize_registries():
         UCSGraphSearch,
         AStarGraphSearch,
         BidirectionalGraphSearch,
+        DStarLiteSearch,
         build_euclidean_heuristic
     )
     from search import (
@@ -146,6 +147,14 @@ def initialize_registries():
         description="Searches from both start and goal simultaneously",
         requires_heuristic=False,
         algorithm_class=BidirectionalGraphSearch
+    )
+    
+    algorithm_registry.register(
+        name="dstar_lite",
+        display_name="D* Lite",
+        description="Incremental heuristic search that can adapt to edge cost changes",
+        requires_heuristic=False,
+        algorithm_class=DStarLiteSearch
     )
     
     algorithm_registry.register(

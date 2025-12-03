@@ -354,16 +354,22 @@ export const SearchProvider = ({ children }) => {
 
   // Animation controls
   const play = useCallback(() => {
+    if (currentStep >= searchSteps.length - 1) {
+      return; // Already at the end
+    }
+    
     setIsPlaying(true);
     animator.start(() => {
+      let shouldContinue = true;
       setCurrentStep(prev => {
         if (prev >= searchSteps.length - 1) {
           setIsPlaying(false);
+          shouldContinue = false;
           return prev;
         }
         return prev + 1;
       });
-      return currentStep < searchSteps.length - 1;
+      return shouldContinue;
     }, speed);
   }, [currentStep, searchSteps.length, speed]);
 
