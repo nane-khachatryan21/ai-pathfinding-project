@@ -168,7 +168,7 @@ def initialize_registries():
     algorithm_registry.register(
         name="bfs_tree",
         display_name="Breadth-First Search (Tree)",
-        description="Explores nodes level by level, may revisit",
+        description="Explores nodes level by level, may revisit. Warning: Very slow on large graphs!",
         requires_heuristic=False,
         algorithm_class=BreadthFirstTreeSearch
     )
@@ -193,7 +193,7 @@ def initialize_registries():
     algorithm_registry.register(
         name="dfs_tree",
         display_name="Depth-First Search (Tree)",
-        description="Explores as deep as possible before backtracking, may revisit",
+        description="Explores as deep as possible before backtracking, may revisit. Warning: Very slow on large graphs!",
         requires_heuristic=False,
         algorithm_class=DFSTreeSearch
     )

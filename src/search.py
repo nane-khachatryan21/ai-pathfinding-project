@@ -148,19 +148,34 @@ class Search:
 
 
 class TreeSearch(Search):
-    def __init__(self, frontier):
+    def __init__(self, frontier, max_nodes=50000):
         self._frontier = frontier
+        self._max_nodes = max_nodes  # Limit to prevent infinite search
 
     def find_solution(self, initial_state, goal_test, callback=None):
         self._number_of_nodes = 1
         self._frontier.clear()
         self._frontier.add_node(Node(None, None, initial_state))
+        expansion_count = 0
+        callback_interval = 50  # Throttle callbacks
+        
         while self._frontier:
             node = self._frontier.remove_node()
+            expansion_count += 1
             
-            # Callback for node expansion
-            if callback:
-                frontier_nodes = [n.state.node_id for n in list(self._frontier._queue) if hasattr(n.state, 'node_id')]
+            # Safety check to prevent infinite searches
+            if self._number_of_nodes > self._max_nodes:
+                print(f"TreeSearch: Node limit ({self._max_nodes}) reached, stopping search")
+                if callback:
+                    dummy_node = Node(None, None, initial_state)
+                    dummy_node.path_cost = 0
+                    callback(event='limit_reached', node=dummy_node, frontier=[], expanded=set(),
+                            error=f"Node limit ({self._max_nodes}) reached. Tree search may not be suitable for large graphs.")
+                return None
+            
+            # Throttled callback for node expansion
+            if callback and expansion_count % callback_interval == 0:
+                frontier_nodes = [n.state.node_id for n in list(self._frontier._queue)[:100] if hasattr(n.state, 'node_id')]
                 callback(event='node_expanded', node=node, frontier=frontier_nodes, expanded=set())
             
             if goal_test.is_goal(node.state):
@@ -217,8 +232,9 @@ class GraphSearch(Search):
 
 
 class BreadthFirstTreeSearch(Search):
-    def __init__(self):
+    def __init__(self, max_nodes=50000):
         self._frontier = BreadthFirstFrontier()
+        self._max_nodes = max_nodes
 
     def find_solution(self, initial_state, goal_test, callback=None):
         node = Node(None, None, initial_state)
@@ -231,13 +247,26 @@ class BreadthFirstTreeSearch(Search):
         self._frontier.clear()
         self._frontier.add_node(node)
         expanded_count = 0
+        callback_interval = 50
+        
         while self._frontier:
             node = self._frontier.remove_node()
             expanded_count += 1
             
-            # Callback for node expansion
-            if callback:
-                frontier_nodes = [n.state.node_id for n in list(self._frontier._queue) if hasattr(n.state, 'node_id')]
+            # Safety check
+            if self._number_of_nodes > self._max_nodes:
+                print(f"BreadthFirstTreeSearch: Node limit ({self._max_nodes}) reached")
+                if callback:
+                    # Notify about the limit
+                    dummy_node = Node(None, None, initial_state)
+                    dummy_node.path_cost = 0
+                    callback(event='limit_reached', node=dummy_node, frontier=[], expanded=set(), 
+                            error=f"Node limit ({self._max_nodes}) reached. Tree search may not be suitable for large graphs.")
+                return None
+            
+            # Throttled callback for node expansion
+            if callback and expanded_count % callback_interval == 0:
+                frontier_nodes = [n.state.node_id for n in list(self._frontier._queue)[:100] if hasattr(n.state, 'node_id')]
                 callback(event='node_expanded', node=node, frontier=frontier_nodes, expanded=set())
             
             for action in node.state.get_applicable_actions():

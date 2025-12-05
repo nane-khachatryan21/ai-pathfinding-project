@@ -315,6 +315,13 @@ def run_search(session_id, graph, algo_meta, start_node_id, goal_node_id,
                 step_data['solution_path'] = kwargs.get('solution_path', [])
                 step_data['solution_path'] = [str(n) for n in step_data['solution_path']]
             
+            if event == 'limit_reached':
+                step_data['error'] = kwargs.get('error', 'Search limit reached')
+                # Store error in session
+                with sessions_lock:
+                    if session_id in search_sessions:
+                        search_sessions[session_id]['error'] = step_data['error']
+            
             with sessions_lock:
                 if session_id in search_sessions:
                     search_sessions[session_id]['steps'].append(step_data)

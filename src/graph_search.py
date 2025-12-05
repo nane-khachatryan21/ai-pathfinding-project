@@ -298,7 +298,13 @@ class BidirectionalGraphSearch(Search):
 
         # Original graph and reversed graph
         G = initial_state.graph
-        G_rev = G.reverse(copy=True)
+        
+        # For undirected graphs (MultiGraph), no need to reverse
+        # For directed graphs, reverse it
+        if G.is_directed():
+            G_rev = G.reverse(copy=True)
+        else:
+            G_rev = G  # Use same graph for undirected
 
         # States at the roots of the two searches
         start_state = initial_state
@@ -610,6 +616,8 @@ class _DStarLiteCore:
         self.graph = G
         self.callback = callback
         self.expansion_count = 0
+        self.callback_throttle_count = 0
+        self.callback_throttle_interval = 10  # Only emit callback every N expansions
 
         self.edge_scheduler = edge_cost_changer
         self.nodes = {}
@@ -641,6 +649,7 @@ class _DStarLiteCore:
         self.U.insert(self.goal)
         self.path_cost = 0
         self.full_path = []
+        self.expanded_nodes = set()  # Track for efficient callback
 
     
     def build_solution_node(self):
@@ -712,11 +721,12 @@ class _DStarLiteCore:
                 return
             
             self.expansion_count += 1
+            self.expanded_nodes.add(u.id)
             
-            # Callback for visualization
-            if self.callback:
-                expanded_set = {node_id for node_id, node in self.nodes.items() if node.g != float('inf')}
-                frontier_list = [node.id for node in [self.U.heap[i][2] for i in range(len(self.U.heap))]]
+            # Throttled callback for visualization - only emit every N expansions
+            if self.callback and self.expansion_count % self.callback_throttle_interval == 0:
+                # Use pre-tracked set instead of computing it each time
+                frontier_list = [node.id for _, _, node in self.U.heap[:100]]  # Limit to first 100 for performance
                 
                 dummy_node = Node(None, None, GraphState(self.graph, u.id))
                 dummy_node.path_cost = u.g
@@ -726,7 +736,7 @@ class _DStarLiteCore:
                     event='node_expanded',
                     node=dummy_node,
                     frontier=frontier_list,
-                    expanded=expanded_set
+                    expanded=self.expanded_nodes
                 )
             
             k_old = u.key
@@ -779,13 +789,12 @@ class _DStarLiteCore:
             dummy_node.path_cost = self.path_cost
             dummy_node.depth = len(path) - 1
             
-            expanded_set = {node_id for node_id, node in self.nodes.items() if node.g != float('inf')}
-            
+            # Use tracked expanded nodes instead of recomputing
             self.callback(
                 event='goal_found',
                 node=dummy_node,
                 frontier=[],
-                expanded=expanded_set,
+                expanded=self.expanded_nodes,
                 solution_path=path
             )
         
