@@ -279,7 +279,11 @@ class BidirectionalGraphSearch(Search):
 
         # Original graph and reversed graph
         G = initial_state.graph
-        G_rev = G.reverse(copy=True)
+
+        if G.is_directed():
+            G_rev = G.reverse(copy=True)
+        else:
+            G_rev = G
 
         # States at the roots of the two searches
         start_state = initial_state
@@ -421,7 +425,15 @@ class EdgeCostChanger:
     Further finalization needed
     """
 
-    def __init__(self, G, node=None, time_to_block=1000, radius=2, factor=10.0, weight_key="length"):
+class EdgeCostChanger:
+    """
+    Simple edge-cost changer for D* Lite.
+    Currently needs manual setup.
+    Further finalization needed.
+    """
+
+    def __init__(self, G, node=None, time_to_block=1000,
+                 radius=2, factor=10.0, weight_key="length"):
         self.G = G
         self.node_to_block = node
         self.time_to_block = time_to_block
@@ -434,7 +446,11 @@ class EdgeCostChanger:
 
     def change_state(self, mode="manual"):
         self._t += 1
+
         if self._t < self.time_to_block:
+            return []
+
+        if self._already_changed or self.node_to_block is None:
             return []
 
         changed_edges = self._inflate_edge_costs()
@@ -529,17 +545,25 @@ class DStarPriorityQueue:
 class DStarSearch(Search):
     def __init__(self, G, start_id, goal_id, edge_cost_changer: EdgeCostChanger):
         
-        self.graph = G
+        self.graph = G #.copy()
 
         self.edge_scheduler = edge_cost_changer
         self.nodes = {}
         for node_id in self.graph.nodes:
             node = DStarNode(node_id)
-            # sucessors
-            node.succ = set(self.graph.successors(node_id))  # our G already supports sucessors and predesessors functions returning ids
-            # predecessors
-            node.pred = set(self.graph.predecessors(node_id))
+
+            if self.graph.is_directed():
+                # Directed: real successors and predecessors
+                node.succ = set(self.graph.successors(node_id))
+                node.pred = set(self.graph.predecessors(node_id))
+            else:
+                # Undirected: neighbors serve as both
+                nbrs = set(self.graph.neighbors(node_id))
+                node.succ = nbrs
+                node.pred = nbrs
+
             self.nodes[node_id] = node
+
 
         self.start:DStarNode = self.nodes[start_id]
         self.goal:DStarNode = self.nodes[goal_id]
@@ -553,6 +577,7 @@ class DStarSearch(Search):
         self.goal.key = self.calculate_key(self.goal)
         self.U.insert(self.goal)
         self.path_cost = 0
+        self.processed_nodes_count = 0
 
         
     def _cost(self, u: DStarNode, v_id):
@@ -597,6 +622,7 @@ class DStarSearch(Search):
             u = self.U.pop()
             if not u:
                 return
+            self.processed_nodes_count += 1
             k_old = u.key
             k_new = self.calculate_key(u)
             if not u:
@@ -611,14 +637,14 @@ class DStarSearch(Search):
                     self.update_vertex(self.nodes[pred])
             else:
                 u.g = float("inf")
-                for pred in u.pred:
+                for pred in u.pred: #
                     self.update_vertex(self.nodes[pred])
                 self.update_vertex(u)
     
 
     def main(self):
         self.compute_shortest_path()
-        path = []
+        path = [self.start.id]
 
         while self.start.id != self.goal.id:
             if self.start.g == float("inf"):
@@ -634,12 +660,12 @@ class DStarSearch(Search):
                 self.last = self.start
 
                 for (u_id, v_id) in changed_edges:  
-                    u = self.nodes[v_id]
+                    u = self.nodes[u_id]
                     self.update_vertex(u)
                 self.compute_shortest_path()
         
         print(f'Path Cost: {self.path_cost}')
-        return path, changed_edges
+        return path, changed_edges, self.processed_nodes_count
 
     def _make_move(self):
         best = None
