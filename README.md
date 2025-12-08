@@ -16,9 +16,9 @@ A comprehensive implementation of pathfinding algorithms applied to real-world r
 - [Quick Start](#quick-start)
 - [Available Algorithms](#available-algorithms)
 - [Graph Data](#graph-data)
-- [Usage Examples](#usage-examples)
+- [Jupyter Notebooks](#jupyter-notebooks)
+- [Algorithm Details](#algorithm-details)
 - [Web Application](#web-application)
-- [Contributing](#contributing)
 
 ## Project Structure
 
@@ -61,8 +61,8 @@ ai-pathfinding-project/
    ```
    or
    ```bash
-   conda create --name myenv
-   conda activate myenv
+   conda create --name <env_name>
+   conda activate <env_name>
    ```
 
 3. **Install dependencies**
