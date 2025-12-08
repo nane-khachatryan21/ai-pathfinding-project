@@ -1,4 +1,3 @@
-# graph_manager.py
 """
 Manager for loading and serving multiple graph options.
 Handles caching and simplification of graphs for efficient transfer.

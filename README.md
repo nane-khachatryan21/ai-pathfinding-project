@@ -287,7 +287,10 @@ ai-pathfinding-project/
 │   │   ├── App.js
 │   │   └── index.js
 │   └── package.json
-└── README.md
+├── README.md
+├── QUICKSTART.md
+├── start_backend.sh
+└── start_frontend.sh
 ```
 
 ## Technologies Used
