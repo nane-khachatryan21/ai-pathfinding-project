@@ -66,18 +66,18 @@ const StatsPanel = () => {
         </h3>
         {!isGraphInfoCollapsed && (
           <div className="collapsible-content">
-            <div className="stat-item">
-              <span className="stat-label">Graph:</span>
-              <span className="stat-value">{stats.graphInfo.name}</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-label">Nodes:</span>
-              <span className="stat-value">{stats.graphInfo.nodeCount.toLocaleString()}</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-label">Edges:</span>
-              <span className="stat-value">{stats.graphInfo.edgeCount.toLocaleString()}</span>
-            </div>
+        <div className="stat-item">
+          <span className="stat-label">Graph:</span>
+          <span className="stat-value">{stats.graphInfo.name}</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">Nodes:</span>
+          <span className="stat-value">{stats.graphInfo.nodeCount.toLocaleString()}</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">Edges:</span>
+          <span className="stat-value">{stats.graphInfo.edgeCount.toLocaleString()}</span>
+        </div>
           </div>
         )}
       </div>
@@ -93,46 +93,46 @@ const StatsPanel = () => {
           </h3>
           {!isSearchStatsCollapsed && (
             <div className="collapsible-content">
-              <div className="stat-item">
-                <span className="stat-label">Step:</span>
-                <span className="stat-value">
-                  {stats.searchInfo.currentStep} / {stats.searchInfo.totalSteps}
-                </span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">Expanded:</span>
-                <span className="stat-value stat-expanded">
-                  {stats.searchInfo.nodesExpanded}
-                </span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">Frontier:</span>
-                <span className="stat-value stat-frontier">
-                  {stats.searchInfo.frontierSize}
-                </span>
-              </div>
-              {currentStepData && currentStepData.path_cost !== undefined && (
-                <div className="stat-item">
-                  <span className="stat-label">Current Cost:</span>
-                  <span className="stat-value">
-                    {currentStepData.path_cost.toFixed(2)} m
-                  </span>
-                </div>
-              )}
-              {stats.searchInfo.pathLength && (
-                <div className="stat-item">
-                  <span className="stat-label">Path Length:</span>
-                  <span className="stat-value stat-solution">
-                    {stats.searchInfo.pathLength} nodes
-                  </span>
-                </div>
-              )}
-              {stats.searchInfo.pathCost !== null && (
-                <div className="stat-item">
-                  <span className="stat-label">Path Cost:</span>
-                  <span className="stat-value stat-solution">
-                    {stats.searchInfo.pathCost.toFixed(2)} m
-                  </span>
+          <div className="stat-item">
+            <span className="stat-label">Step:</span>
+            <span className="stat-value">
+              {stats.searchInfo.currentStep} / {stats.searchInfo.totalSteps}
+            </span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">Expanded:</span>
+            <span className="stat-value stat-expanded">
+              {stats.searchInfo.nodesExpanded}
+            </span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">Frontier:</span>
+            <span className="stat-value stat-frontier">
+              {stats.searchInfo.frontierSize}
+            </span>
+          </div>
+          {currentStepData && currentStepData.path_cost !== undefined && (
+            <div className="stat-item">
+              <span className="stat-label">Current Cost:</span>
+              <span className="stat-value">
+                {currentStepData.path_cost.toFixed(2)} m
+              </span>
+            </div>
+          )}
+          {stats.searchInfo.pathLength && (
+            <div className="stat-item">
+              <span className="stat-label">Path Length:</span>
+              <span className="stat-value stat-solution">
+                {stats.searchInfo.pathLength} nodes
+              </span>
+            </div>
+          )}
+          {stats.searchInfo.pathCost !== null && (
+            <div className="stat-item">
+              <span className="stat-label">Path Cost:</span>
+              <span className="stat-value stat-solution">
+                {stats.searchInfo.pathCost.toFixed(2)} m
+              </span>
                 </div>
               )}
             </div>
@@ -161,7 +161,7 @@ const StatsPanel = () => {
         <div className="stats-section">
           <div className="error-message">
             <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
-              ✗ No Solution Found
+            ✗ No Solution Found
             </div>
             <div style={{ fontSize: '12px', fontWeight: 'normal', lineHeight: '1.4' }}>
               {searchError 

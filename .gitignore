@@ -23,6 +23,7 @@ MANIFEST
 venv/
 ENV/
 env/
+cache/
 
 # Graph data files (large)
 src/graphs/*.pkl

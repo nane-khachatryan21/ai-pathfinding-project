@@ -1,6 +1,8 @@
 # graph_search.py
 import math
 import heapq
+import networkx as nx
+from collections import deque
 
 from search import (
     State,
@@ -10,7 +12,7 @@ from search import (
     Node,
     BestFirstFrontier,
     UCSFunction,
-    AStarFunction,
+    AStarFunction
 )
 
 
@@ -185,10 +187,6 @@ class AStarGraphSearch(Search):
     def get_frontier(self):
         return self._frontier
 
-
-
-
-
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000.0
     # Convert degrees to radians
@@ -201,7 +199,6 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2*math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
     
-
 def build_euclidean_heuristic(graph, goal_node_id):
     """
     Returns a heuristic function h(state) that estimates
@@ -214,19 +211,6 @@ def build_euclidean_heuristic(graph, goal_node_id):
     goal_lat = goal_data["y"]
     goal_lon = goal_data["x"]
 
-    # Earth radius in meters
-    R = 6371000.0
-    def haversine(lat1, lon1, lat2, lon2):
-        # Convert degrees to radians
-        phi1 = math.radians(lat1)
-        phi2 = math.radians(lat2)
-        dphi = math.radians(lat2 - lat1)
-        dlambda = math.radians(lon2 - lon1)
-
-        a = (math.sin(dphi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda/2)**2)
-        c = 2*math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        return R * c
-
     def h(state):
         node_data = graph.nodes[state.node_id]
         lat = node_data["y"]
@@ -235,7 +219,6 @@ def build_euclidean_heuristic(graph, goal_node_id):
         return haversine(lat, lon, goal_lat, goal_lon)
 
     return h
-
 
 class BidirectionalGraphSearch(Search):
 
@@ -450,20 +433,15 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2*math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
-
-import networkx as nx
-from collections import deque
-
-from collections import deque
-
 class EdgeCostChanger:
     """
     Simple edge-cost changer for D* Lite.
-    Currently needs manuall setup
-    Further finalization needed
+    Currently needs manual setup.
+    Further finalization needed.
     """
 
-    def __init__(self, G, node=None, time_to_block=1000, radius=2, factor=10.0, weight_key="length"):
+    def __init__(self, G, node=None, time_to_block=1000,
+                 radius=2, factor=10.0, weight_key="length"):
         self.G = G
         self.node_to_block = node
         self.time_to_block = time_to_block
@@ -476,7 +454,11 @@ class EdgeCostChanger:
 
     def change_state(self, mode="manual"):
         self._t += 1
+
         if self._t < self.time_to_block:
+            return []
+
+        if self._already_changed or self.node_to_block is None:
             return []
 
         changed_edges = self._inflate_edge_costs()
@@ -568,72 +550,30 @@ class DStarPriorityQueue:
         return node.id in self.entry_finder
 
 
-class DStarLiteSearch(Search):
-    """
-    D* Lite implementation that can adapt to edge cost changes.
-    This is a wrapper that makes it compatible with the standard Search interface.
-    """
-    def __init__(self):
-        self._expanded_node_count = 0
-    
-    def find_solution(self, initial_state, goal_test, callback=None):
-        """
-        Adapter method to make D* Lite compatible with the standard search interface.
-        For visualization purposes, we'll run D* Lite without dynamic edge changes.
-        """
-        graph = initial_state.graph
-        start_id = initial_state.node_id
-        goal_id = goal_test.get_goal_node()
-        
-        # Create a no-op edge cost changer (no changes during search)
-        edge_changer = EdgeCostChanger(graph, node=None, time_to_block=float('inf'))
-        
-        # Create the actual D* Lite searcher
-        dstar = _DStarLiteCore(graph, start_id, goal_id, edge_changer, callback=callback)
-        
-        try:
-            # Run the search
-            path, _ = dstar.main()
-            self._expanded_node_count = dstar.expansion_count
-            
-            if not path or len(path) == 0:
-                return None
-            
-            # Build a Node chain for compatibility
-            return dstar.build_solution_node()
-        except Exception as e:
-            print(f"D* Lite search error: {e}")
-            return None
-    
-    def get_expanded_node_count(self):
-        return self._expanded_node_count
-
-
-class _DStarLiteCore:
-    """Internal D* Lite implementation."""
+class DStarSearch(Search):
     def __init__(self, G, start_id, goal_id, edge_cost_changer: EdgeCostChanger, callback=None):
         
-        self.graph = G
-        self.callback = callback
-        self.expansion_count = 0
-        self.callback_throttle_count = 0
-        self.callback_throttle_interval = 10  # Only emit callback every N expansions
+        self.graph = G #.copy()
 
         self.edge_scheduler = edge_cost_changer
+        self.callback = callback
+        self.expanded_nodes = set()
         self.nodes = {}
         for node_id in self.graph.nodes:
             node = DStarNode(node_id)
-            # For undirected graphs (MultiGraph), use neighbors for both successors and predecessors
-            # For directed graphs, use successors() and predecessors()
+
             if self.graph.is_directed():
+                # Directed: real successors and predecessors
                 node.succ = set(self.graph.successors(node_id))
                 node.pred = set(self.graph.predecessors(node_id))
             else:
-                # For undirected graphs, neighbors serve as both successors and predecessors
-                neighbors = set(self.graph.neighbors(node_id))
-                node.succ = neighbors
-                node.pred = neighbors
+                # Undirected: neighbors serve as both
+                nbrs = set(self.graph.neighbors(node_id))
+                node.succ = nbrs
+                node.pred = nbrs
+
             self.nodes[node_id] = node
+
 
         self.start:DStarNode = self.nodes[start_id]
         self.goal:DStarNode = self.nodes[goal_id]
@@ -648,40 +588,14 @@ class _DStarLiteCore:
         self.goal.key = self.calculate_key(self.goal)
         self.U.insert(self.goal)
         self.path_cost = 0
-        self.full_path = []
-        self.expanded_nodes = set()  # Track for efficient callback
+        self.processed_nodes_count = 0
 
-    
-    def build_solution_node(self):
-        """Build a Node chain from the found path for compatibility."""
-        if not self.full_path:
-            return None
-        
-        # Build linked Node structure
-        current_node = Node(None, None, GraphState(self.graph, self.full_path[0]))
-        
-        for i in range(1, len(self.full_path)):
-            prev_id = self.full_path[i-1]
-            curr_id = self.full_path[i]
-            
-            edge_data = self.graph.get_edge_data(prev_id, curr_id)
-            if edge_data:
-                key = next(iter(edge_data.keys()))
-                cost = edge_data[key]["length"]
-            else:
-                cost = 0
-            
-            next_state = GraphState(self.graph, curr_id)
-            next_action = GraphAction(curr_id, cost)
-            current_node = Node(current_node, next_action, next_state)
-        
-        return current_node
         
     def _cost(self, u: DStarNode, v_id):
         edge_data = self.graph.get_edge_data(u.id, v_id)
         if not edge_data:
             return float("inf")
-        key = next(iter(edge_data.keys()))
+        key = next(iter(edge_data.keys())) #list(edge_data.keys())[0]
         return edge_data[key]["length"]
     
     def _dstar_h(self, u: DStarNode, v: DStarNode):
@@ -719,24 +633,24 @@ class _DStarLiteCore:
             u = self.U.pop()
             if not u:
                 return
-            
-            self.expansion_count += 1
+            self.processed_nodes_count += 1
             self.expanded_nodes.add(u.id)
             
-            # Throttled callback for visualization - only emit every N expansions
-            if self.callback and self.expansion_count % self.callback_throttle_interval == 0:
-                # Use pre-tracked set instead of computing it each time
-                frontier_list = [node.id for _, _, node in self.U.heap[:100]]  # Limit to first 100 for performance
+            # Invoke callback for visualization
+            if self.callback and self.processed_nodes_count % 20 == 0:
+                # Get current frontier nodes
+                frontier_list = [node_id for _, node_id, _ in self.U.heap[:50]]
                 
+                # Create a dummy Node for callback
                 dummy_node = Node(None, None, GraphState(self.graph, u.id))
                 dummy_node.path_cost = u.g
-                dummy_node.depth = len(self.full_path)
+                dummy_node.depth = self.processed_nodes_count
                 
                 self.callback(
                     event='node_expanded',
                     node=dummy_node,
                     frontier=frontier_list,
-                    expanded=self.expanded_nodes
+                    expanded=self.expanded_nodes.copy()
                 )
             
             k_old = u.key
@@ -753,52 +667,57 @@ class _DStarLiteCore:
                     self.update_vertex(self.nodes[pred])
             else:
                 u.g = float("inf")
-                for pred in u.pred:
+                for pred in u.pred: #
                     self.update_vertex(self.nodes[pred])
                 self.update_vertex(u)
     
 
     def main(self):
+        print("D* Lite: Computing initial shortest path...")
         self.compute_shortest_path()
-        path = [self.initial_start_id]  # Include start node in path
+        
+        # Check if path exists
+        if self.start.g == float("inf"):
+            print('D* Lite: No path exists')
+            return [], [], self.processed_nodes_count
+        
+        print("D* Lite: Following path to goal...")
+        path = [self.start.id]
 
         while self.start.id != self.goal.id:
             if self.start.g == float("inf"):
                 print('D* Lite: path does not exist')
-                return [], []
+                return path, [], self.processed_nodes_count
 
             self._make_move()
             path.append(self.start.id)
+            
+            # Emit callback during path following
+            if self.callback and len(path) % 5 == 0:
+                dummy_node = Node(None, None, GraphState(self.graph, self.start.id))
+                dummy_node.path_cost = self.path_cost
+                dummy_node.depth = len(path)
+                
+                self.callback(
+                    event='node_expanded',
+                    node=dummy_node,
+                    frontier=[],
+                    expanded=self.expanded_nodes.copy()
+                )
 
             changed_edges = self.edge_scheduler.change_state()
             if changed_edges:
+                print(f"D* Lite: Edge costs changed! {len(changed_edges)} edges affected. Replanning...")
                 self.km = self.km + self.heuristic(self.last, self.start)
                 self.last = self.start
 
                 for (u_id, v_id) in changed_edges:  
-                    u = self.nodes[v_id]
+                    u = self.nodes[u_id]
                     self.update_vertex(u)
                 self.compute_shortest_path()
         
-        self.full_path = path
-        print(f'D* Lite Path Cost: {self.path_cost:.2f}m')
-        
-        # Callback for goal found
-        if self.callback and len(path) > 0:
-            dummy_node = Node(None, None, GraphState(self.graph, self.goal.id))
-            dummy_node.path_cost = self.path_cost
-            dummy_node.depth = len(path) - 1
-            
-            # Use tracked expanded nodes instead of recomputing
-            self.callback(
-                event='goal_found',
-                node=dummy_node,
-                frontier=[],
-                expanded=self.expanded_nodes,
-                solution_path=path
-            )
-        
-        return path, []
+        print(f'D* Lite: Path found! Cost: {self.path_cost:.2f}m, Length: {len(path)} nodes')
+        return path, changed_edges, self.processed_nodes_count
 
     def _make_move(self):
         best = None
@@ -809,12 +728,95 @@ class _DStarLiteCore:
                 best_val = cost_val
                 best = self.nodes[s_id]
         
-        if best is None:
-            return
-        
         self.path_cost += self._cost(self.start, best.id)
         self.start = best
 
-        return 
+        return
+    
+    def get_expanded_node_count(self):
+        return self.processed_nodes_count
+
+
+class DStarLiteSearch(Search):
+    """
+    Wrapper class for DStarSearch to conform to the standard Search interface.
+    This adapter allows D* Lite to be used with the same API as other search algorithms.
+    """
+    def __init__(self):
+        self._dstar_instance = None
+    
+    def find_solution(self, initial_state, goal_test, callback=None):
+        """
+        Create and run a D* Lite search instance using main() method.
+        """
+        graph = initial_state.graph
+        start_id = initial_state.node_id
+        goal_id = goal_test.get_goal_node()
         
+        # Create EdgeCostChanger with no-op behavior for web app
+        # (no dynamic edge changes during visualization)
+        edge_changer = EdgeCostChanger(graph, node=None, time_to_block=float('inf'))
+        
+        # Create D* Lite instance
+        self._dstar_instance = DStarSearch(
+            G=graph,
+            start_id=start_id,
+            goal_id=goal_id,
+            edge_cost_changer=edge_changer,
+            callback=callback
+        )
+        
+        # Run the search using main()
+        path, changed_edges, processed_count = self._dstar_instance.main()
+        
+        # Check if path was found
+        if not path or len(path) == 0:
+            return None
+        
+        # Build Node chain from the path for compatibility with the app
+        goal_node = self._build_node_chain(graph, path)
+        
+        # Emit final goal_found callback
+        if callback and goal_node:
+            callback(
+                event='goal_found',
+                node=goal_node,
+                frontier=[],
+                expanded=self._dstar_instance.expanded_nodes.copy(),
+                solution_path=[str(n) for n in path]
+            )
+        
+        return goal_node
+    
+    def _build_node_chain(self, graph, path):
+        """Convert path (list of node IDs) to a Node chain."""
+        if not path or len(path) == 0:
+            return None
+        
+        # Build Node chain from start to goal
+        start_state = GraphState(graph, path[0])
+        current_node = Node(parent=None, action=None, state=start_state)
+        
+        for i in range(1, len(path)):
+            prev_id = path[i - 1]
+            curr_id = path[i]
+            
+            edge_data = graph.get_edge_data(prev_id, curr_id)
+            if edge_data is None:
+                raise ValueError(f"No edge from {prev_id} to {curr_id}")
+            
+            first_key = next(iter(edge_data.keys()))
+            cost_value = edge_data[first_key]["length"]
+            
+            next_state = GraphState(graph, curr_id)
+            next_action = GraphAction(curr_id, cost_value)
+            current_node = Node(parent=current_node, action=next_action, state=next_state)
+        
+        return current_node
+    
+    def get_expanded_node_count(self):
+        if self._dstar_instance:
+            return self._dstar_instance.get_expanded_node_count()
+        return 0
+
         

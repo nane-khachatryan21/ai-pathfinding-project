@@ -15,6 +15,7 @@ A modern web application for visualizing pathfinding algorithms on real-world ro
   - A* Search (with heuristics)
   - Uniform Cost Search (UCS)
   - Bidirectional Search
+  - D* Search (work-in-progress)
   - Breadth-First Search (Graph & Tree variants)
   - Depth-First Search (Graph & Tree variants)
 
@@ -78,32 +79,29 @@ A modern web application for visualizing pathfinding algorithms on real-world ro
 
 4. **Start the Flask server:**
    ```bash
-   cd api
+   ./start_backend.sh
+   ```
+   or
+   ```bash
+   cd src/api
    python server.py
    ```
    
    The server will start on `http://localhost:5004`
 
 ### Frontend Setup
-
-1. **Navigate to the frontend directory:**
    ```bash
-   cd ai-pathfinding-project/frontend
+   ./start_frontend.sh
    ```
-
-2. **Install dependencies:**
+   or
    ```bash
-   npm install
+   cd frontend
+   npm install  # first time only
+   npm start
    ```
-   
    If you encounter permission errors with npm, you may need to fix npm cache permissions:
    ```bash
    sudo chown -R $(whoami) ~/.npm
-   ```
-
-3. **Start the development server:**
-   ```bash
-   npm start
    ```
    
    The application will open in your browser at `http://localhost:3000`
@@ -338,23 +336,9 @@ ai-pathfinding-project/
 **Problem**: Map not displaying
 - **Solution**: Check browser console for errors; ensure Leaflet CSS is loaded
 
-## Future Enhancements
-
-- [ ] Add more graph options (other countries, cities)
-- [ ] Implement additional algorithms (IDA*, Jump Point Search)
-- [ ] Add custom heuristic editor
-- [ ] Export animation as video/GIF
-- [ ] Add algorithm comparison mode
-- [ ] Real-time traffic data integration
-- [ ] Mobile app version
-
 ## License
 
 This project is created for educational purposes.
-
-## Contributors
-
-Created as part of an AI course project demonstrating pathfinding algorithms on real-world road networks.
 
 ## Acknowledgments
 
@@ -362,8 +346,3 @@ Created as part of an AI course project demonstrating pathfinding algorithms on 
 - OSMnx library for geographic data processing
 - Leaflet for map visualization
 - React community for excellent documentation
-
----
-
-**Enjoy exploring pathfinding algorithms!** 🚀🗺️
-

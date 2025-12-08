@@ -158,7 +158,7 @@ const ControlPanel = () => {
             {startNodeValidation.status !== 'idle' && (
               <span className={`validation-message ${startNodeValidation.status}`}>
                 {startNodeValidation.message}
-              </span>
+            </span>
             )}
           </div>
           
@@ -180,7 +180,7 @@ const ControlPanel = () => {
             {goalNodeValidation.status !== 'idle' && (
               <span className={`validation-message ${goalNodeValidation.status}`}>
                 {goalNodeValidation.message}
-              </span>
+            </span>
             )}
           </div>
 
