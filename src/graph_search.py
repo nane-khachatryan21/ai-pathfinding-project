@@ -1,6 +1,8 @@
 import math
 import heapq
 import random
+import networkx as nx
+from collections import deque
 
 from search import (
     State,
@@ -397,24 +399,8 @@ def haversine(lat1, lon1, lat2, lon2):
     return R * c
 
 
-import networkx as nx
-from collections import deque
-
-from collections import deque
-
 class EdgeCostChanger:
-    """
-    Simple edge-cost changer for D* Lite.
-    Currently needs manuall setup
-    Further finalization needed
-    """
 
-class EdgeCostChanger:
-    """
-    Simple edge-cost changer for D* Lite.
-    Currently needs manual setup.
-    Further finalization needed.
-    """
 
     def __init__(self, G, node=None, time_to_block=1000,
                  radius=2, factor=10.0, weight_key="length"):
@@ -475,26 +461,6 @@ class EdgeCostChanger:
     
 
 class ProbabilisticEdgeCostChanger:
-    """
-    Randomly inflates edge costs over time.
-
-    Parameters
-    ----------
-    G : networkx.Graph / Multi(Graph/DiGraph)
-        Graph whose edges will be modified IN-PLACE.
-    step_change_prob : float
-        Probability (per call) that some edges will change.
-    num_edges_to_change : int
-        Number of random edges to change when a change event happens.
-    factor_range : (float, float)
-        Multiplicative factor range; actual factor is sampled uniform in [min, max].
-    weight_key : str
-        Edge attribute to modify, e.g. "length" or "travel_time".
-    copy_graph : bool
-        If True, internally copy G so the original is not modified.
-    random_seed : int or None
-        For reproducibility.
-    """
 
     def __init__(
         self,
@@ -559,8 +525,6 @@ class DStarNode:
         self.succ = set()
         self.pred = set()
 
-    # def __lt__(self, other):
-    #     return self.key < other.key
 
 
 class DStarPriorityQueue:
@@ -579,11 +543,6 @@ class DStarPriorityQueue:
                 del self.entry_finder[node.id]
                 return node
         return None  # empty
-
-    # def top_key(self):
-    #     if not self.heap:
-    #         return (float("inf"), float("inf"))
-    #     return self.heap[0][0]
 
     def top_key(self):
         while self.heap:
@@ -744,14 +703,6 @@ class DStarSearch(Search):
         
         
 class DynamicAStarGraphSearch(Search):
-    """
-    A* in a dynamic environment.
-
-    Uses an EdgeCostChanger-compatible object which modifies the graph
-    in-place and reports which edges changed. Whenever a change happens,
-    A* is re-run from the current position to the goal. The expanded
-    node count is accumulated across all replanning episodes.
-    """
 
     def __init__(self, edge_cost_changer):
         self._edge_changer = edge_cost_changer
@@ -759,9 +710,7 @@ class DynamicAStarGraphSearch(Search):
         self._total_expanded = 0
 
     def _extract_state_path(self, goal_node):
-        """
-        From the final Node returned by A*, recover the list of node_ids.
-        """
+
         ids = []
         node = goal_node
         while node is not None:
@@ -770,11 +719,7 @@ class DynamicAStarGraphSearch(Search):
         return ids[::-1]  # start -> goal
 
     def _build_node_chain(self, graph, path_ids):
-        """
-        Same idea as in your BidirectionalGraphSearch: build a linked
-        chain of Node objects along a path of node_ids, using 'length'
-        as the edge cost.
-        """
+
         start_id = path_ids[0]
         start_state = GraphState(graph, start_id)
         current_node = Node(parent=None, action=None, state=start_state)
@@ -797,52 +742,38 @@ class DynamicAStarGraphSearch(Search):
         return current_node
 
     def find_solution(self, initial_state, goal_test, heuristic):
-        """
-        Run dynamic A* until goal is reached or no path remains.
 
-        Returns
-        -------
-        Node or None
-            Goal node (linked chain) in the *current* graph, or None if no path exists.
-        """
         self._total_expanded = 0
 
         graph = initial_state.graph
         current_state = initial_state
 
-        # Store full path of node_ids as the agent actually moves
+
         full_path_ids = [current_state.node_id]
 
-        # Main high-level loop: keep moving until we reach the goal
         while not goal_test.is_goal(current_state):
 
-            # 1) Plan from current_state to goal with regular A*
+
             a_star_result = self._astar.find_solution(current_state, goal_test, heuristic)
             if a_star_result is None:
-                # No path in the current graph
+
                 return None
 
             self._total_expanded += self._astar.get_expanded_node_count()
 
-            # 2) Get planned path (node ids) from current_state to goal
-            planned_path_ids = self._extract_state_path(a_star_result)
-            # planned_path_ids[0] should equal current_state.node_id
 
-            # 3) Follow the planned path step by step
-            #    After each step, see if edges changed; if so, break and replan.
+            planned_path_ids = self._extract_state_path(a_star_result)
+
             i = 1
             while i < len(planned_path_ids):
                 next_id = planned_path_ids[i]
 
-                # Move agent one step
                 current_state = GraphState(graph, next_id)
                 full_path_ids.append(next_id)
                 i += 1
 
-                # Environment step
                 changed_edges = self._edge_changer.change_state()
                 if changed_edges:
-                    # Graph has changed; replan from current_state in outer loop
                     break
 
             if goal_test.is_goal(current_state):
